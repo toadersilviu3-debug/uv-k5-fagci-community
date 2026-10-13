@@ -13,6 +13,11 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-13 in the independent SPC0002 community fork.
+ * Added name-only EEPROM persistence preserving six reserved slot bytes.
+ * Original copyright/license notices are retained. See CHANGELOG.md.
+ */
+
 
 #include <string.h>
 #if defined(ENABLE_FMRADIO)
@@ -176,6 +181,35 @@ void SETTINGS_SaveSettings(void)
 	State[6] = gSetting_ScrambleEnable;
 
 	EEPROM_WriteBuffer(0x0F40, State);
+}
+
+// Rename only: preserve channel parameters and the six reserved slot bytes.
+bool SETTINGS_SaveChannelName(uint8_t Channel, const char *Name)
+{
+	uint8_t Slot[16], Original[16];
+	uint8_t Length = 10;
+	if (!IS_MR_CHANNEL(Channel) || !RADIO_CheckValidChannel(Channel, false, 0))
+		return false;
+	const uint16_t Address = 0x0F50 + Channel * 16;
+	EEPROM_ReadBuffer(Address, Slot, sizeof(Slot));
+	memcpy(Original, Slot, sizeof(Slot));
+	while (Length && Name[Length - 1] == ' ')
+		Length--;
+	memset(Slot, 0, 10);
+	memcpy(Slot, Name, Length);
+	for (uint8_t Offset = 0; Offset < 16; Offset += 8) {
+		if (memcmp(Slot + Offset, Original + Offset, 8))
+			EEPROM_WriteBuffer(Address + Offset, Slot + Offset);
+	}
+	// Both VFOs may refer to the same memory channel.
+	for (uint8_t VFO = 0; VFO < 2; VFO++) {
+		VFO_Info_t *Info = &gEeprom.VfoInfo[VFO];
+		if (Info->CHANNEL_SAVE == Channel) {
+			memset(Info->Name, 0, sizeof(Info->Name));
+			memcpy(Info->Name, Slot, 10);
+		}
+	}
+	return true;
 }
 
 void SETTINGS_SaveChannel(uint8_t Channel, uint8_t VFO, const VFO_Info_t *pVFO, uint8_t Mode)

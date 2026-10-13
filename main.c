@@ -13,6 +13,11 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-13 in the independent SPC0002 community fork.
+ * Updated normal menu count to include NAME.
+ * Original copyright/license notices are retained. See CHANGELOG.md.
+ */
+
 
 #include "app/app.h"
 #include "app/dtmf.h"
@@ -38,6 +43,7 @@
 #include "radio.h"
 #include "settings.h"
 #include "ui/lock.h"
+#include "ui/menu.h"
 #include "ui/welcome.h"
 #include "version.h"
 
@@ -102,7 +108,7 @@ void Main(void) {
     UI_DisplayWelcome();
     BACKLIGHT_TurnOn();
     SYSTEM_DelayMs(1000);
-    gMenuListCount = 49;
+    gMenuListCount = MENU_350TX;
 
     BootMode = BOOT_GetMode();
     if (gEeprom.POWER_ON_PASSWORD < 1000000) {

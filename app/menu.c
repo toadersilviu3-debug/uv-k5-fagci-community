@@ -13,6 +13,11 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-13 in the independent SPC0002 community fork.
+ * Added NAME editing, cancellation, and dedicated name-only persistence.
+ * Original copyright/license notices are retained. See CHANGELOG.md.
+ */
+
 
 #include "finput.h"
 #include <string.h>
@@ -27,6 +32,7 @@
 #include "board.h"
 #include "bsp/dp32g030/gpio.h"
 #include "driver/backlight.h"
+#include "driver/eeprom.h"
 #include "driver/gpio.h"
 #include "driver/keyboard.h"
 #include "frequencies.h"
@@ -38,6 +44,65 @@
 #include "ui/inputbox.h"
 #include "ui/menu.h"
 #include "ui/ui.h"
+
+char gMenuChannelName[11];
+uint8_t gMenuNamePosition;
+uint8_t gMenuNameChannel = 0xFF;
+
+static void MENU_LoadChannelName(void) {
+  gMenuNamePosition = 0;
+  gMenuNameChannel = gTxVfo->CHANNEL_SAVE;
+  memset(gMenuChannelName, ' ', 10);
+  gMenuChannelName[10] = 0;
+  if (!IS_MR_CHANNEL(gMenuNameChannel) ||
+      !RADIO_CheckValidChannel(gMenuNameChannel, false, 0)) {
+    gMenuNameChannel = 0xFF;
+    return;
+  }
+  uint8_t Name[10];
+  EEPROM_ReadBuffer(0x0F50 + gMenuNameChannel * 16, Name, sizeof(Name));
+  for (uint8_t i = 0; i < 10 && Name[i] && Name[i] != 0xFF; i++)
+    gMenuChannelName[i] = (Name[i] >= 32 && Name[i] <= 126) ? Name[i] : ' ';
+}
+
+static void MENU_Key_ChannelName(KEY_Code_t Key, bool Pressed, bool Held) {
+  if (!Pressed || (Held && Key != KEY_UP && Key != KEY_DOWN))
+    return;
+  gBeepToPlay = BEEP_1KHZ_60MS_OPTIONAL;
+  gRequestDisplayScreen = DISPLAY_MENU;
+  switch (Key) {
+  case KEY_UP:
+  case KEY_DOWN:
+    gMenuChannelName[gMenuNamePosition] = NUMBER_AddWithWraparound(
+        gMenuChannelName[gMenuNamePosition], Key == KEY_UP ? 1 : -1, 32, 126);
+    break;
+  case KEY_STAR:
+    gMenuNamePosition = NUMBER_AddWithWraparound(gMenuNamePosition, -1, 0, 9);
+    break;
+  case KEY_F:
+    gMenuNamePosition = NUMBER_AddWithWraparound(gMenuNamePosition, 1, 0, 9);
+    break;
+  case KEY_MENU:
+    gFlagAcceptSetting = true;
+    gIsInSubMenu = false;
+    break;
+  case KEY_EXIT:
+    gIsInSubMenu = false;
+    gFlagRefreshSetting = true;
+    break;
+  case KEY_PTT:
+    GENERIC_Key_PTT(Pressed);
+    break;
+  default:
+    if (Key <= KEY_9) {
+      gMenuChannelName[gMenuNamePosition] = '0' + Key;
+      gMenuNamePosition = NUMBER_AddWithWraparound(gMenuNamePosition, 1, 0, 9);
+    } else {
+      gBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;
+    }
+    break;
+  }
+}
 
 void MENU_StartCssScan(int8_t Direction) {
   gCssScanMode = CSS_SCAN_MODE_SCANNING;
@@ -177,6 +242,10 @@ void MENU_AcceptSetting(void) {
   }
 
   switch (gMenuCursor) {
+  case MENU_NAME:
+    if (!SETTINGS_SaveChannelName(gMenuNameChannel, gMenuChannelName))
+      gBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;
+    return;
   case MENU_SQL:
     gEeprom.SQUELCH_LEVEL = gSubMenuSelection;
     gRequestSaveSettings = true;
@@ -528,6 +597,9 @@ static void MENU_ClampSelection(int8_t Direction) {
 
 void MENU_ShowCurrentSetting(void) {
   switch (gMenuCursor) {
+  case MENU_NAME:
+    MENU_LoadChannelName();
+    break;
   case MENU_SQL:
     gSubMenuSelection = gEeprom.SQUELCH_LEVEL;
     break;
@@ -910,6 +982,13 @@ static void MENU_Key_MENU(bool bKeyPressed, bool bKeyHeld) {
     gBeepToPlay = BEEP_1KHZ_60MS_OPTIONAL;
     gRequestDisplayScreen = DISPLAY_MENU;
     if (!gIsInSubMenu) {
+      if (gMenuCursor == MENU_NAME) {
+        MENU_LoadChannelName();
+        if (gMenuNameChannel == 0xFF) {
+          gBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;
+          return;
+        }
+      }
       gAskForConfirmation = 0;
       gIsInSubMenu = true;
     } else {
@@ -1041,6 +1120,10 @@ static void MENU_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld,
 }
 
 void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
+  if (gMenuCursor == MENU_NAME && gIsInSubMenu) {
+    MENU_Key_ChannelName(Key, bKeyPressed, bKeyHeld);
+    return;
+  }
   switch (Key) {
   case KEY_0:
   case KEY_1:

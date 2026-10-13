@@ -13,6 +13,11 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-13 in the independent SPC0002 community fork.
+ * Added declarations for the NAME editor state.
+ * Original copyright/license notices are retained. See CHANGELOG.md.
+ */
+
 
 #ifndef APP_MENU_H
 #define APP_MENU_H
@@ -27,6 +32,10 @@ void MENU_StartCssScan(int8_t Direction);
 void MENU_StopCssScan(void);
 
 void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
+
+extern char gMenuChannelName[11];
+extern uint8_t gMenuNamePosition;
+extern uint8_t gMenuNameChannel;
 
 #endif
 

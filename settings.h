@@ -13,6 +13,11 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-13 in the independent SPC0002 community fork.
+ * Declared the name-only persistence function.
+ * Original copyright/license notices are retained. See CHANGELOG.md.
+ */
+
 
 #ifndef SETTINGS_H
 #define SETTINGS_H
@@ -188,6 +193,7 @@ void SETTINGS_SaveFM(void);
 void SETTINGS_SaveVfoIndices(void);
 void SETTINGS_SaveSettings(void);
 void SETTINGS_SaveChannel(uint8_t Channel, uint8_t VFO, const VFO_Info_t *pVFO, uint8_t Mode);
+bool SETTINGS_SaveChannelName(uint8_t Channel, const char *Name);
 void SETTINGS_UpdateChannel(uint8_t Channel, const VFO_Info_t *pVFO, bool bUpdate);
 
 #endif

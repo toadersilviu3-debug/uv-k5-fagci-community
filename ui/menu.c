@@ -13,9 +13,15 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-13 in the independent SPC0002 community fork.
+ * Added NAME menu entry and ten-character editor display.
+ * Original copyright/license notices are retained. See CHANGELOG.md.
+ */
+
 
 #include "menu.h"
 #include "../app/dtmf.h"
+#include "../app/menu.h"
 #include "../bitmaps.h"
 #include "../dcs.h"
 #include "../driver/st7565.h"
@@ -87,6 +93,7 @@ static const char MenuList[][7] = {
     // 0x30
     "DEL-CH",
     "RESET",
+    "NAME",
     "350TX",
     "F-LOCK",
     "200TX",
@@ -221,6 +228,25 @@ void UI_DisplayMenu(void) {
   }
 
   memset(String, 0, sizeof(String));
+
+  if (gMenuCursor == MENU_NAME) {
+    if (gMenuNameChannel == 0xFF) {
+      UI_PrintStringSmall("MR ONLY", 58, 0, 2);
+    } else {
+      sprintf(String, "CH-%03u", gMenuNameChannel + 1);
+      UI_PrintStringSmall(String, 58, 0, 0);
+      // Small font is 6 pixels plus 1 spacing: ten characters fit in 70 px.
+      UI_PrintStringSmall(gMenuChannelName, 58, 0, 2);
+      if (gIsInSubMenu) {
+        for (uint8_t x = 0; x < 6; x++)
+          gFrameBuffer[3][58 + gMenuNamePosition * 7 + x] = 0x80;
+        UI_PrintStringSmall("*/F:MOVE", 58, 0, 4);
+        UI_PrintStringSmall("MENU:SAVE", 58, 0, 5);
+      }
+    }
+    ST7565_BlitFullScreen();
+    return;
+  }
 
   switch (gMenuCursor) {
   case MENU_SQL:

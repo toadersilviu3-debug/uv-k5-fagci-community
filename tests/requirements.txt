@@ -1,0 +1,3 @@
+# SPDX-License-Identifier: Apache-2.0
+# Added for the independent SPC0002 community fork, 2026-10-13.
+unicorn==2.1.4

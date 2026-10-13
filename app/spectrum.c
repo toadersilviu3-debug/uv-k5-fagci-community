@@ -13,6 +13,11 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-13 in the independent SPC0002 community fork.
+ * Added Side Key 2 channel capture, slot selection, confirmation, and saving.
+ * Original copyright/license notices are retained. See CHANGELOG.md.
+ */
+
 
 #include "../app/spectrum.h"
 #include "finput.h"
@@ -84,6 +89,10 @@ static MovingAverage mov = {{128}, {}, 255, 128, 0, 0};
 static const uint8_t MOV_N = ARRAY_SIZE(mov.buf);
 
 uint8_t menuState = 0;
+static uint32_t saveFrequency;
+static uint8_t saveChannel;
+static bool saveConfirm, saveKeyRelease;
+static State saveReturnState;
 #ifdef ENABLE_ALL_REGISTERS
 uint8_t hiddenMenuState = 0;
 #endif
@@ -541,12 +550,63 @@ static void ToggleListeningBW() {
   redrawScreen = true;
 }
 
-static void ToggleBacklight() {
-  settings.backlightState = !settings.backlightState;
-  if (settings.backlightState) {
-    GPIO_SetBit(&GPIOB->DATA, GPIOB_PIN_BACKLIGHT);
-  } else {
-    GPIO_ClearBit(&GPIOB->DATA, GPIOB_PIN_BACKLIGHT);
+static void BeginChannelSave() {
+  if (isTransmitting)
+    return;
+  saveFrequency = currentState == SPECTRUM ? peak.f : fMeasure;
+  if (saveFrequency < F_MIN || saveFrequency > F_MAX)
+    return;
+  saveReturnState = currentState;
+  saveConfirm = false;
+  saveChannel = 0;
+  for (uint8_t i = 0; i < 200; i++) {
+    if (!RADIO_CheckValidChannel(i, false, 0)) {
+      saveChannel = i;
+      break;
+    }
+  }
+  saveKeyRelease = true;
+  SetState(SAVE_CHANNEL);
+}
+
+static void OnKeyDownSave(KEY_Code_t key) {
+  if (key == KEY_EXIT) {
+    saveKeyRelease = true;
+    SetState(saveReturnState);
+  } else if (key == KEY_UP || key == KEY_DOWN) {
+    saveChannel = NUMBER_AddWithWraparound(saveChannel, key == KEY_UP ? 1 : -1, 0, 199);
+    saveConfirm = false;
+    redrawScreen = true;
+    SYSTEM_DelayMs(100);
+  } else if (key == KEY_MENU) {
+    if (!saveConfirm) {
+      saveConfirm = true;
+      redrawScreen = true;
+      return;
+    }
+    VFO_Info_t vfo = {0};
+    bool occupied = RADIO_CheckValidChannel(saveChannel, false, 0);
+    vfo.ConfigRX.Frequency = saveFrequency;
+    vfo.Band = FREQUENCY_GetBand(saveFrequency);
+    vfo.AM_CHANNEL_MODE = settings.modulationType;
+    vfo.CHANNEL_BANDWIDTH = settings.listenBw != BK4819_FILTER_BW_WIDE;
+    vfo.STEP_SETTING = settings.scanStepIndex;
+    vfo.OUTPUT_POWER = gEeprom.VfoInfo[gEeprom.TX_CHANNEL].OUTPUT_POWER;
+    vfo.SCANLIST1_PARTICIPATION = true;
+    vfo.SCANLIST2_PARTICIPATION = true;
+    SETTINGS_SaveChannel(saveChannel, 0, &vfo, 2);
+    if (!occupied)
+      SETTINGS_SaveChannelName(saveChannel, "          ");
+    // Reload cached channels only after leaving Spectrum.
+    gFlagResetVfos = true;
+    gVfoConfigureMode = VFO_CONFIGURE_RELOAD;
+    memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+    sprintf(String, "SAVED CH-%03u", saveChannel + 1);
+    UI_PrintStringSmall(String, 8, 0, 2);
+    ST7565_BlitFullScreen();
+    SYSTEM_DelayMs(600);
+    saveKeyRelease = true;
+    SetState(saveReturnState);
   }
 }
 
@@ -855,7 +915,7 @@ static void OnKeyDown(uint8_t key) {
     ToggleStepsCount();
     break;
   case KEY_SIDE2:
-    ToggleBacklight();
+    BeginChannelSave();
     break;
   case KEY_PTT:
     SetState(STILL);
@@ -1004,7 +1064,7 @@ void OnKeyDownStill(KEY_Code_t key) {
     redrawScreen = true;
     break;
   case KEY_SIDE2:
-    ToggleBacklight();
+    BeginChannelSave();
     break;
   case KEY_PTT:
     // start transmit
@@ -1176,6 +1236,15 @@ static void Render() {
   case STILL:
     RenderStill();
     break;
+  case SAVE_CHANNEL:
+    DrawF(saveFrequency);
+    sprintf(String, "SAVE CH-%03u", saveChannel + 1);
+    UI_PrintStringSmall(String, 8, 0, 2);
+    UI_PrintStringSmall(RADIO_CheckValidChannel(saveChannel, false, 0)
+                           ? (saveConfirm ? "REPLACE?" : "OCCUPIED")
+                           : (saveConfirm ? "SAVE?" : "EMPTY"), 8, 0, 3);
+    UI_PrintStringSmall("MENU:OK EXIT:NO", 8, 0, 5);
+    break;
   }
 
   ST7565_BlitFullScreen();
@@ -1186,10 +1255,14 @@ bool HandleUserInput() {
   kbd.current = GetKey();
 
   if (kbd.current == KEY_INVALID) {
+    saveKeyRelease = false;
     kbd.counter = 0;
     OnKeysReleased();
     return true;
   }
+
+  if (saveKeyRelease)
+    return true;
 
   if (kbd.current == kbd.prev && kbd.counter <= 40) {
     kbd.counter++;
@@ -1206,6 +1279,11 @@ bool HandleUserInput() {
       break;
     case STILL:
       OnKeyDownStill(kbd.current);
+      break;
+    case SAVE_CHANNEL:
+      // Holding MENU must never turn selection into a confirmed overwrite.
+      if (kbd.counter == 5 || kbd.current == KEY_UP || kbd.current == KEY_DOWN)
+        OnKeyDownSave(kbd.current);
       break;
     }
   }
@@ -1319,6 +1397,14 @@ static void Tick() {
     __enable_irq();
   }
 #endif
+  if (currentState == SAVE_CHANNEL) {
+    if (redrawScreen) {
+      Render();
+      redrawScreen = false;
+    }
+    HandleUserInput();
+    return;
+  }
   if (newScanStart) {
     InitScan();
     newScanStart = false;

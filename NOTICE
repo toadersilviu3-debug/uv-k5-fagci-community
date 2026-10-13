@@ -1,0 +1,11 @@
+SPC0002 is an independent community derivative of FAGCI MOD v1.2.1.
+Original source attribution includes fagci, Dual Tachyon, OneOfEleven,
+and the other contributors credited in upstream source files and documentation.
+Their original notices remain authoritative and are retained.
+
+Egzumer 0.22 was used for comparison and supplied the local archive from
+which missing ARM CMSIS_5 and mpaland/printf dependency files were recovered.
+The Egzumer AM controller has not been ported into SPC0002.
+
+This community fork is not an official FAGCI, Egzumer, or Quansheng release.
+These project names describe provenance and do not imply endorsement.

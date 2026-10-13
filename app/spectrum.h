@@ -13,6 +13,11 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-13 in the independent SPC0002 community fork.
+ * Added the Spectrum channel-save state.
+ * Original copyright/license notices are retained. See CHANGELOG.md.
+ */
+
 
 #ifndef SPECTRUM_H
 #define SPECTRUM_H
@@ -57,6 +62,7 @@ typedef enum State {
   SPECTRUM,
   FREQ_INPUT,
   STILL,
+  SAVE_CHANNEL,
 } State;
 
 typedef enum StepsCount {

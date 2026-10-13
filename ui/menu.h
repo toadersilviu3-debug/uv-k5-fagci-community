@@ -13,6 +13,11 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-13 in the independent SPC0002 community fork.
+ * Added NAME and a symbolic menu count.
+ * Original copyright/license notices are retained. See CHANGELOG.md.
+ */
+
 
 #ifndef UI_MENU_H
 #define UI_MENU_H
@@ -70,12 +75,14 @@ enum {
 	MENU_AM,
 	MENU_DEL_CH,
 	MENU_RESET,
+	MENU_NAME,
 	MENU_350TX,
 	MENU_F_LOCK,
 	MENU_200TX,
 	MENU_500TX,
 	MENU_ALL_TX,
 	MENU_SCREN,
+	MENU_COUNT,
 };
 
 extern bool gIsInSubMenu;

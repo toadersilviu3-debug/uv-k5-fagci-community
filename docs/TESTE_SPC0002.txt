@@ -1,0 +1,32 @@
+test_all_200_slots_preserve_every_other_eeprom_byte (test_channel_name.ChannelNameTests.test_all_200_slots_preserve_every_other_eeprom_byte) ... ok
+test_cancel_displays_original_and_writes_nothing (test_channel_name.ChannelNameTests.test_cancel_displays_original_and_writes_nothing) ... ok
+test_channel_target_remains_pinned_while_editing (test_channel_name.ChannelNameTests.test_channel_target_remains_pinned_while_editing) ... ok
+test_cursor_character_wrap_digits_and_repeat_events (test_channel_name.ChannelNameTests.test_cursor_character_wrap_digits_and_repeat_events) ... ok
+test_invalid_or_empty_channels_never_write (test_channel_name.ChannelNameTests.test_invalid_or_empty_channels_never_write) ... ok
+test_packed_firmware_payload_and_crc (test_channel_name.ChannelNameTests.test_packed_firmware_payload_and_crc) ... ok
+test_previous_normal_menu_numbers_preserved (test_channel_name.ChannelNameTests.test_previous_normal_menu_numbers_preserved) ... ok
+test_ptt_and_timeout_discard_draft (test_channel_name.ChannelNameTests.test_ptt_and_timeout_discard_draft) ... ok
+test_save_reload_after_restart_and_both_vfo_caches (test_channel_name.ChannelNameTests.test_save_reload_after_restart_and_both_vfo_caches) ... ok
+test_shortening_and_clearing_name (test_channel_name.ChannelNameTests.test_shortening_and_clearing_name) ... ok
+test_ten_characters_and_last_cursor_fit_display (test_channel_name.ChannelNameTests.test_ten_characters_and_last_cursor_fit_display) ... ok
+test_unchanged_name_avoids_eeprom_wear (test_channel_name.ChannelNameTests.test_unchanged_name_avoids_eeprom_wear) ... ok
+test_vfo_and_empty_channel_cannot_enter_editor (test_channel_name.ChannelNameTests.test_vfo_and_empty_channel_cannot_enter_editor) ... ok
+test_all_200_occupied_slots_change_only_target_channel_and_attribute (test_spectrum_save.SpectrumSaveTests.test_all_200_occupied_slots_change_only_target_channel_and_attribute) ... ok
+test_all_modulations_bandwidths_and_steps_persist_after_channel_reload (test_spectrum_save.SpectrumSaveTests.test_all_modulations_bandwidths_and_steps_persist_after_channel_reload) ... ok
+test_cancel_at_either_stage_preserves_whole_eeprom_and_vfos (test_spectrum_save.SpectrumSaveTests.test_cancel_at_either_stage_preserves_whole_eeprom_and_vfos) ... ok
+test_changed_slot_requires_new_confirmation (test_spectrum_save.SpectrumSaveTests.test_changed_slot_requires_new_confirmation) ... ok
+test_first_free_channel_and_slot_wrap (test_spectrum_save.SpectrumSaveTests.test_first_free_channel_and_slot_wrap) ... ok
+test_frequency_stays_captured_and_other_keys_do_not_change_modulation (test_spectrum_save.SpectrumSaveTests.test_frequency_stays_captured_and_other_keys_do_not_change_modulation) ... ok
+test_held_sk2_waits_for_release_and_ptt_is_ignored_in_save (test_spectrum_save.SpectrumSaveTests.test_held_sk2_waits_for_release_and_ptt_is_ignored_in_save) ... ok
+test_invalid_peak_or_transmission_does_not_open_save (test_spectrum_save.SpectrumSaveTests.test_invalid_peak_or_transmission_does_not_open_save) ... ok
+test_name_editor_can_rename_channel_created_by_spectrum (test_spectrum_save.SpectrumSaveTests.test_name_editor_can_rename_channel_created_by_spectrum) ... ok
+test_new_channel_clears_old_unused_name_preserves_reserved_and_calibration (test_spectrum_save.SpectrumSaveTests.test_new_channel_clears_old_unused_name_preserves_reserved_and_calibration) ... ok
+test_one_menu_and_holding_menu_do_not_save (test_spectrum_save.SpectrumSaveTests.test_one_menu_and_holding_menu_do_not_save) ... ok
+test_save_menu_and_confirmation_render_without_frame_overflow (test_spectrum_save.SpectrumSaveTests.test_save_menu_and_confirmation_render_without_frame_overflow) ... ok
+test_sk2_in_still_uses_actual_tuned_frequency (test_spectrum_save.SpectrumSaveTests.test_sk2_in_still_uses_actual_tuned_frequency) ... ok
+test_sk2_uses_displayed_peak_not_sweeping_frequency (test_spectrum_save.SpectrumSaveTests.test_sk2_uses_displayed_peak_not_sweeping_frequency) ... ok
+
+----------------------------------------------------------------------
+Ran 27 tests in 2.852s
+
+OK

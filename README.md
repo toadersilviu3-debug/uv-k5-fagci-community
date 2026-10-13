@@ -1,81 +1,52 @@
-# Open reimplementation of the Quan Sheng UV K5 v2.1.27 firmware
+# UV-K5 FAGCI community extensions - SPC0002
 
-This repository is a preservation project of the UV K5 v2.1.27 firmware.
-It is dedicated to understanding how the radio works and help developers making their own customisations/fixes/etc.
-It is by no means fully understood or has all variables/functions properly named, as this is best effort only.
-As a result, this repository will not include any customisations or improvements over the original firmware.
+An independent experimental community fork based on **FAGCI MOD v1.2.1 (4dcc901)**. It adds an on-radio channel-name editor and direct Spectrum channel capture. This is not an official FAGCI, Egzumer, or Quansheng release and does not imply endorsement by those authors.
 
-You can find an alternate branch called "fixes" that contains fixes for real bugs present in the original firmware.
-This branch will also accumulate fixes/improvements from newer releases by QS (for example v2.01.31).
+## Features
 
-For improved/better firmware and new features, you can find the following repositories by other collaborators:
+- **MENU 50 NAME:** edit the active memory channel's ten-character name.
+- **F, then 5:** enter Spectrum.
+- **Side Key 2 in Spectrum:** choose a slot and confirm saving with two distinct MENU presses; EXIT cancels.
+- Existing channel-name bytes, adjacent EEPROM data, and calibration are preserved by the documented write paths.
 
-* https://github.com/fagci/uv-k5-firmware-fagci-mod
-* https://github.com/OneOfEleven/uv-k5-firmware-custom
-* https://github.com/Tunas1337/uv-k5-firmware (Check the branches)
-* https://github.com/rebezhir/openquack for Russian users
+See [Romanian help](docs/HELP_MENIU_SPC0002.md), [PDF help](docs/HELP_MENIU_SPC0002.pdf), and [change history](CHANGELOG.md).
 
-# Compiler
+## Status and compatible hardware
 
-arm-none-eabi GCC version 10.3.1 is recommended, which is the current version on Ubuntu 22.04.03 LTS.
-Other versions may generate a flash file that is too big.
-You can get an appropriate version from: https://developer.arm.com/downloads/-/gnu-rm
+**Experimental / pre-release.** The code targets the DP32G030 architecture of the supplied UV-K5 source. Compatibility with other board revisions or different processors is not established. Do not infer compatibility from a similar product name.
 
-# Building
+The development record contains a successful owner-reported flash of the earlier NAME001 build. It does not yet establish field validation of SPC0002, every feature, or AM audio quality. Twenty-seven automated tests passed against compiled ARM instructions with simulated peripherals; these are not RF measurements or hardware certification.
 
-To build the firmware, you need to fetch the submodules and then run make:
-```
-git submodule update --init --recursive --depth=1
-make
-```
+## Release files
 
-# Flashing with the official updater
+- `firmware_SPC0002.bin`: raw firmware, 60,928 bytes, for a raw-compatible loader such as the K5Prog setup used during development.
+- `firmware_SPC0002.packed.bin`: packed firmware, 60,946 bytes, for a compatible packed-format loader.
+- `firmware_SPC0002_release.zip`: both formats, notices, checksums, and help. Keep the two formats distinct.
+- `sursa_FAGCI_SPC0002_publicare.zip`: complete source snapshot including the dependencies actually used for the distributed build.
 
-* Use the firmware.packed.bin file
+Back up the radio's own configuration and calibration before testing. Preserve the originals. Flash only the firmware for this change; do not upload another radio's calibration. Firmware is provided AS IS under the included licenses. Use transmission functions only where you are authorized to do so.
 
-# Flashing with [k5prog](https://github.com/piotr022/k5prog)
+## Build and reproducibility
 
-* ./k5prog -F -YYY -b firmware.bin
+The distributed image was compiled using MSYS2 UCRT64, arm-none-eabi GCC 16.1.0, the inherited Makefile options, and Python crcmod. Raw firmware uses 60,928 of the project's 61,440 flash bytes. Run `bash build-firmware.sh` with the ARM tools, make, and a Python environment containing crcmod available.
 
-# Flashing with SWD
+The original local FAGCI archive had empty dependency directories. The build used CMSIS_5 and printf recovered from the supplied Egzumer 0.22 archive. This is disclosed in [dependency provenance](docs/DEPENDENCY_PROVENANCE.md). The complete release source snapshot contains those files. Do not claim that an unverified clone using the upstream submodule pins reproduces these exact inputs. This branch vendors the actual dependency snapshot directly; the original submodule metadata is archived in docs/upstream.gitmodules.txt.
 
-* If you own a JLink or compatible device and want to use the Segger software, you can find a flash loader [here](https://github.com/DualTachyon/dp32g030-flash-loader)
-* If you want to use OpenOCD instead, you can use run "make flash" off this repo.
-* The DP32G030 has flash masking to move the bootloader out of the way. Do not try to flash your own way outside of the above methods or risk losing your bootloader.
+The firmware embeds compile date/time, so a later rebuild can have a different hash. The release hashes identify the distributed binaries, not a promise of bit-for-bit reproducibility on every compiler or date.
 
-# Support
+## Tests and known limitations
 
-* If you like my work, you can support me through https://ko-fi.com/DualTachyon
+On Windows, install `tests/requirements.txt` in a Python environment and run `python -m unittest discover -s tests -v` after compiling. The test scripts default to `C:\msys64\ucrt64\bin`; ARM_BIN can override this path. The [test record](docs/TESTE_SPC0002.txt) describes the executed tests.
 
-# Credits
+- Normal menu 47 MODUL offers only FM/AM. Other modes are selected through F then 7 or Spectrum key 0.
+- Ordinary menu changes to an existing MR channel may require explicit MEM-CH confirmation to persist; see the help.
+- The legacy custom CHIRP module supplied during development approves OSFW-4dcc901 exactly. Its compatibility with OSFW-SPC0002 has not been verified; this release does not claim working CHIRP support.
+- Special LNAs/LNA/PGA/MIX/IF and other register adjustments are temporary.
+- AM-fix has not been replaced or tuned in this release.
 
-Many thanks to various people on Telegram for putting up with me during this effort and helping:
+Report the firmware version, board revision, loader, exact steps, expected/actual results, and whether configuration/calibration were restored. Do not attach private EEPROM dumps or other people's channel/contact data to public issues.
 
-* [Mikhail](https://github.com/fagci/)
-* [Andrej](https://github.com/Tunas1337)
-* [Manuel](https://github.com/manujedi)
-* @wagner
-* @Lohtse Shar
-* [@Matoz](https://github.com/spm81)
-* @Davide
-* @Ismo OH2FTG
-* [OneOfEleven](https://github.com/OneOfEleven)
-* and others I forget
+## License and credits
 
-# License
-
-Copyright 2023 Dual Tachyon
-https://github.com/DualTachyon
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+The inherited firmware is Apache-2.0. Keep LICENSE, NOTICE, original copyright headers, and third-party licenses with redistributions. printf remains MIT. See [CREDITS.md](CREDITS.md) and THIRD_PARTY_NOTICES.txt. These notices do not imply upstream endorsement.
 

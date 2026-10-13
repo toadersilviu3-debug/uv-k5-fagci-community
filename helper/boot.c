@@ -13,6 +13,11 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-13 in the independent SPC0002 community fork.
+ * Updated special menu count after adding NAME.
+ * Original copyright/license notices are retained. See CHANGELOG.md.
+ */
+
 
 #include "app/aircopy.h"
 #include "bsp/dp32g030/gpio.h"
@@ -62,7 +67,7 @@ void BOOT_ProcessMode(BOOT_Mode_t Mode)
 		gMenuCursor = MENU_350TX;
 		gSubMenuSelection = gSetting_350TX;
 		GUI_SelectNextDisplay(DISPLAY_MENU);
-		gMenuListCount = 55;
+		gMenuListCount = MENU_COUNT;
 		gF_LOCK = true;
 #if defined(ENABLE_AIRCOPY)
 	} else if (Mode == BOOT_MODE_AIRCOPY) {

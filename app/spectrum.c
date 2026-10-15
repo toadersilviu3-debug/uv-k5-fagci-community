@@ -1,3 +1,4 @@
+/* Modified 2026-10-14 for TXP0007: persistent per-memory TX inhibition. */
 /* Copyright 2023 fagci
  * https://github.com/fagci
  *
@@ -13,6 +14,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 /* Modified 2026-10-13 in the independent SPC0002 community fork.
  * Added Side Key 2 channel capture, slot selection, confirmation, and saving.
  * Original copyright/license notices are retained. See CHANGELOG.md.
@@ -91,7 +96,8 @@ static const uint8_t MOV_N = ARRAY_SIZE(mov.buf);
 uint8_t menuState = 0;
 static uint32_t saveFrequency;
 static uint8_t saveChannel;
-static bool saveConfirm, saveKeyRelease;
+static bool saveConfirm, saveKeyRelease, saveManual;
+static uint16_t saveGain, saveIF;
 static State saveReturnState;
 #ifdef ENABLE_ALL_REGISTERS
 uint8_t hiddenMenuState = 0;
@@ -120,7 +126,7 @@ static void UpdateRegMenuValue(RegisterSpec s, bool add) {
 
 // Utility functions
 
-KEY_Code_t GetKey() {
+__attribute__((noinline)) KEY_Code_t GetKey() {
   KEY_Code_t btn = KEYBOARD_Poll();
   if (btn == KEY_INVALID && !GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT)) {
     btn = KEY_PTT;
@@ -313,6 +319,9 @@ static void RegRestore(uint8_t num) {
 }
 
 static void ToggleTX(bool on) {
+  if (on && gCurrentVfo->TxInhibit) {
+    return;
+  }
   if (isTransmitting == on) {
     return;
   }
@@ -557,6 +566,9 @@ static void BeginChannelSave() {
   if (saveFrequency < F_MIN || saveFrequency > F_MAX)
     return;
   saveReturnState = currentState;
+  saveManual = false;
+  saveGain = BK4819_ReadRegister(BK4819_REG_13) & 0x03FF;
+  saveIF = BK4819_ReadRegister(0x3D);
   saveConfirm = false;
   saveChannel = 0;
   for (uint8_t i = 0; i < 200; i++) {
@@ -578,6 +590,10 @@ static void OnKeyDownSave(KEY_Code_t key) {
     saveConfirm = false;
     redrawScreen = true;
     SYSTEM_DelayMs(100);
+  } else if (key == KEY_F && saveReturnState == STILL) {
+    saveManual = !saveManual;
+    saveConfirm = false;
+    redrawScreen = true;
   } else if (key == KEY_MENU) {
     if (!saveConfirm) {
       saveConfirm = true;
@@ -586,6 +602,9 @@ static void OnKeyDownSave(KEY_Code_t key) {
     }
     VFO_Info_t vfo = {0};
     bool occupied = RADIO_CheckValidChannel(saveChannel, false, 0);
+    vfo.RxManual = saveManual;
+    vfo.RxGain = saveGain;
+    vfo.RxIF = saveIF;
     vfo.ConfigRX.Frequency = saveFrequency;
     vfo.Band = FREQUENCY_GetBand(saveFrequency);
     vfo.AM_CHANNEL_MODE = settings.modulationType;
@@ -1071,7 +1090,8 @@ void OnKeyDownStill(KEY_Code_t key) {
     UpdateBatteryInfo();
     if (gBatteryDisplayLevel == 6) {
       txAllowState = VFO_STATE_VOL_HIGH;
-    } else if (IsTXAllowed(GetOffsetedF(gCurrentVfo, fMeasure))) {
+    } else if (!gCurrentVfo->TxInhibit &&
+               IsTXAllowed(GetOffsetedF(gCurrentVfo, fMeasure))) {
       txAllowState = VFO_STATE_NORMAL;
       ToggleTX(true);
     } else {
@@ -1223,7 +1243,7 @@ static void RenderStill() {
 #endif
 }
 
-static void Render() {
+__attribute__((noinline)) static void SPECTRUM_Render() {
   memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
 
   switch (currentState) {
@@ -1243,6 +1263,7 @@ static void Render() {
     UI_PrintStringSmall(RADIO_CheckValidChannel(saveChannel, false, 0)
                            ? (saveConfirm ? "REPLACE?" : "OCCUPIED")
                            : (saveConfirm ? "SAVE?" : "EMPTY"), 8, 0, 3);
+    UI_PrintStringSmall(saveReturnState == STILL ? (saveManual ? "RX:MANUAL F:MODE" : "RX:AUTO F:MODE") : "RX:AUTO", 8, 0, 4);
     UI_PrintStringSmall("MENU:OK EXIT:NO", 8, 0, 5);
     break;
   }
@@ -1250,7 +1271,7 @@ static void Render() {
   ST7565_BlitFullScreen();
 }
 
-bool HandleUserInput() {
+__attribute__((noinline)) bool HandleUserInput() {
   kbd.prev = kbd.current;
   kbd.current = GetKey();
 
@@ -1399,7 +1420,7 @@ static void Tick() {
 #endif
   if (currentState == SAVE_CHANNEL) {
     if (redrawScreen) {
-      Render();
+      SPECTRUM_Render();
       redrawScreen = false;
     }
     HandleUserInput();
@@ -1430,7 +1451,7 @@ static void Tick() {
     redrawStatus = false;
   }
   if (redrawScreen) {
-    Render();
+    SPECTRUM_Render();
     redrawScreen = false;
   }
   if (!preventKeypress) {
@@ -1448,8 +1469,14 @@ static void AutomaticPresetChoose(uint32_t f) {
   }
 }
 
-void APP_RunSpectrum() {
+__attribute__((noinline)) void APP_RunSpectrum() {
   BackupRegisters();
+#ifdef ENABLE_AM_FIX
+  // Modified 2026-10-14, AMH0004: Spectrum does not run AM-fix.
+  // Use hardware AGC here; RestoreRegisters restores the normal RX mode.
+  BK4819_WriteRegister(BK4819_REG_7E,
+      BK4819_ReadRegister(BK4819_REG_7E) & ~0x8000u);
+#endif
 
   // AM_fix_init();
 
@@ -1482,3 +1509,5 @@ void APP_RunSpectrum() {
     Tick();
   }
 }
+
+

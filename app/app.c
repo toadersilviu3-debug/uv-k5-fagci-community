@@ -13,6 +13,13 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
+/* Modified 2026-10-14, SOS0005: repeated Morse flashlight SOS.
+ * Original authors/license retained. See CHANGELOG.md.
+ */
 
 #include "app/action.h"
 #include <string.h>
@@ -73,7 +80,7 @@ const uint8_t origLna = 2;      // -14dB
 const uint8_t origMixer = 3;    //   0dB
 const uint8_t origPga = 6;      //  -3dB
 
-static void APP_ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
+__attribute__((noinline)) static void APP_ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
 
 static void APP_CheckForIncoming(void) {
   if (!g_SquelchLost) {
@@ -293,7 +300,7 @@ static void APP_HandleFunction(void) {
   }
 }
 
-void APP_StartListening(FUNCTION_Type_t Function, const bool resetAmFix) {
+__attribute__((noinline)) void APP_StartListening(FUNCTION_Type_t Function, const bool resetAmFix) {
   const unsigned int chan = gEeprom.RX_CHANNEL;
   //	const unsigned int chan = gRxVfo->channelSave;
 
@@ -345,7 +352,7 @@ void APP_StartListening(FUNCTION_Type_t Function, const bool resetAmFix) {
     gUpdateStatus = true;
   }
 
-  { // RF RX front end gain
+  if (!gRxVfo->RxManual) { // RF RX front end gain
 
     // original setting
     /* uint16_t lnaShort = origLnaShort;
@@ -381,6 +388,7 @@ void APP_StartListening(FUNCTION_Type_t Function, const bool resetAmFix) {
           (gEeprom.DAC_GAIN << 0));    // AF DAC Gain (after Gain-1 and Gain-2)
 
   BK4819_SetModulation(gRxVfo->ModulationType);
+  RADIO_ApplyRxProfile();
 
   FUNCTION_Select(Function);
 
@@ -803,7 +811,7 @@ void APP_Update(void) {
   }
 }
 
-void APP_CheckKeys(void) {
+__attribute__((noinline)) void APP_CheckKeys(void) {
   KEY_Code_t Key;
 
 #if defined(ENABLE_AIRCOPY)
@@ -875,7 +883,7 @@ void APP_CheckKeys(void) {
   }
 }
 
-void APP_TimeSlice10ms(void) {
+__attribute__((noinline)) void APP_TimeSlice10ms(void) {
   gFlashLightBlinkCounter++;
 
 #if defined(ENABLE_UART)
@@ -901,7 +909,7 @@ void APP_TimeSlice10ms(void) {
   }
 
 #ifdef ENABLE_AM_FIX
-  if (gRxVfo->ModulationType == MOD_AM)
+  if (gRxVfo->ModulationType == MOD_AM && !gRxVfo->RxManual)
     AM_fix_10ms(gEeprom.RX_CHANNEL);
 #endif
 
@@ -928,10 +936,8 @@ void APP_TimeSlice10ms(void) {
   }
 #endif
 
-  if (gFlashLightState == FLASHLIGHT_BLINK &&
-      (gFlashLightBlinkCounter & 15U) == 0) {
-    GPIO_FlipBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
-  }
+  if ((gFlashLightBlinkCounter & 15U) == 0)
+    ACTION_FlashLightTick();
   if (gVoxResumeCountdown) {
     gVoxResumeCountdown--;
   }
@@ -1303,7 +1309,7 @@ void CHANNEL_Next(bool bBackup, int8_t Direction) {
   bScanKeepFrequency = false;
 }
 
-static void APP_ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
+__attribute__((noinline)) static void APP_ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
   bool bFlag;
 
   if (gCurrentFunction == FUNCTION_POWER_SAVE) {
@@ -1432,6 +1438,12 @@ static void APP_ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
       return;
     }
   }
+
+  // Modified 2026-10-14: do not transmit or run side-key actions while
+  // choosing/confirming a MEM-CH destination (including long-SK2 entry).
+  if (gScreenToDisplay == DISPLAY_MENU && gMenuCursor == MENU_MEM_CH &&
+      gIsInSubMenu && (Key == KEY_PTT || Key == KEY_SIDE1 || Key == KEY_SIDE2))
+    return;
 
   if (!bFlag) {
     if (gCurrentFunction == FUNCTION_TRANSMIT) {

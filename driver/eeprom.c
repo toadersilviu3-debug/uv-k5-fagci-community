@@ -13,12 +13,16 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include "driver/eeprom.h"
 #include "driver/i2c.h"
 #include "driver/system.h"
 
-void EEPROM_ReadBuffer(uint16_t Address, void *pBuffer, uint8_t Size)
+__attribute__((noinline)) void EEPROM_ReadBuffer(uint16_t Address, void *pBuffer, uint8_t Size)
 {
 	I2C_Start();
 
@@ -36,7 +40,7 @@ void EEPROM_ReadBuffer(uint16_t Address, void *pBuffer, uint8_t Size)
 	I2C_Stop();
 }
 
-void EEPROM_WriteBuffer(uint16_t Address, const void *pBuffer)
+__attribute__((noinline)) void EEPROM_WriteBuffer(uint16_t Address, const void *pBuffer)
 
 {
 	I2C_Start();

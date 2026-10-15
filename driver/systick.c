@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include "ARMCM0.h"
 #include "driver/systick.h"
@@ -27,7 +31,7 @@ void SYSTICK_Init(void)
 	gTickMultiplier = 48;
 }
 
-void SYSTICK_DelayUs(uint32_t Delay)
+__attribute__((noinline)) void SYSTICK_DelayUs(uint32_t Delay)
 {
 	uint32_t i;
 	uint32_t Start;

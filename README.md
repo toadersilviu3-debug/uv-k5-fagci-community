@@ -1,52 +1,80 @@
-# UV-K5 FAGCI community extensions - SPC0002
+# UV-K5 FAGCI Community - TXM0008
 
-An independent experimental community fork based on **FAGCI MOD v1.2.1 (4dcc901)**. It adds an on-radio channel-name editor and direct Spectrum channel capture. This is not an official FAGCI, Egzumer, or Quansheng release and does not imply endorsement by those authors.
+Independent community firmware based on FAGCI MOD v1.2.1 / DualTachyon.
+Latest build: **OSFW-TXM0008**. The owner reported successful operation on their
+radio on **15 October 2026**; **135 automated tests** also passed. This remains an
+experimental community release for the original DP32G030 source platform.
 
-## Features
+## Download and instructions
 
-- **MENU 50 NAME:** edit the active memory channel's ten-character name.
-- **F, then 5:** enter Spectrum.
-- **Side Key 2 in Spectrum:** choose a slot and confirm saving with two distinct MENU presses; EXIT cancels.
-- Existing channel-name bytes, adjacent EEPROM data, and calibration are preserved by the documented write paths.
+- [TXM0008 release and complete package](https://github.com/toadersilviu3-debug/uv-k5-fagci-community/releases/tag/txm0008-test1)
+- [Complete English guide](docs/TXM0008_USER_GUIDE_EN.md) / [PDF](docs/TXM0008_USER_GUIDE_EN.pdf)
+- [Romanian TXM0008 instructions](docs/TXM0008_RO.md)
+- [All community changes](docs/CHANGES_TXM0008_EN.md) / [development changelog](CHANGELOG.md)
+- [Validation and field report](docs/VALIDATION_TXM0008_PUBLIC.md)
 
-See [Romanian help](docs/HELP_MENIU_SPC0002.md), [PDF help](docs/HELP_MENIU_SPC0002.pdf), and [change history](CHANGELOG.md).
+The release includes raw and packed firmware, the matching CHIRP Python module,
+complete source/dependencies, English MD/PDF help, Romanian help, test logs,
+SHA256 checksums, and **official K5Prog Windows v1.26 with corresponding source and GPL license**.
+The privately modified IJV K5Prog executable is not redistributed.
 
-## Status and compatible hardware
+## Features added in this community project
 
-**Experimental / pre-release.** The code targets the DP32G030 architecture of the supplied UV-K5 source. Compatibility with other board revisions or different processors is not established. Do not infer compatibility from a similar product name.
+- **50 NAME:** view/edit full ten-character memory names without discarding RX profiles.
+- **Spectrum Side Key 2:** capture the peak/fixed frequency, choose a destination and explicitly confirm saving.
+- **Long Side Key 2 in VFO:** save the accepted/tuned frequency using MEM-CH.
+- **AM reception integration:** fixed hardware gain slot with inherited FAGCI software AM-fix; other modes restore hardware AGC.
+- **Flashlight SOS:** steady / repeated Morse SOS / off.
+- **Optional RX profile:** explicitly save gain/IF from fixed Spectrum listening as RX:MANUAL; AUTO remains default.
+- **Per-memory TX permission:** persistent RX-only flag, respected by normal and Spectrum TX paths.
+- **51 TX-CH:** on-radio ON/OFF with CH-xxx, MR ONLY and GLOBAL OFF; both matching VFO caches update immediately.
+- **CHIRP TXM0008 driver:** correct EEPROM mapping, RX profiles and TX flag, settings, changed-byte upload with conflict checks and readback verification.
 
-The development record contains a successful owner-reported flash of the earlier NAME001 build. It does not yet establish field validation of SPC0002, every feature, or AM audio quality. Twenty-seven automated tests passed against compiled ARM instructions with simulated peripherals; these are not RF measurements or hardware certification.
+Quick TX menu: select a stored transmit memory, **M -> 5 -> 1 -> M**, choose ON/OFF,
+then M to save or EXIT to cancel. ON still obeys global limits. The same frequency
+in another memory or VFO is independent. Special menus are now 52-57; boot shortcut
+remains PTT + Side Key 1.
 
-## Release files
+## Installation and limits
 
-- `firmware_SPC0002.bin`: raw firmware, 60,928 bytes, for a raw-compatible loader such as the K5Prog setup used during development.
-- `firmware_SPC0002.packed.bin`: packed firmware, 60,946 bytes, for a compatible packed-format loader.
-- `firmware_SPC0002_release.zip`: both formats, notices, checksums, and help. Keep the two formats distinct.
-- `sursa_FAGCI_SPC0002_publicare.zip`: complete source snapshot including the dependencies actually used for the distributed build.
+Use firmware_TXM0008.bin with a raw-compatible loader, or the packed file with
+a compatible packed loader. Keep each radio's own calibration/configuration
+backup. No reset is required when upgrading from this community project's earlier
+builds. In CHIRP load chirp/uvk5_fagci_txm0008.py and download a NEW image using
+Quansheng / UV-K5 FAGCI TXM0008. Old IJV/TXP0007 tabs are not converted automatically.
 
-Back up the radio's own configuration and calibration before testing. Preserve the originals. Flash only the firmware for this change; do not upload another radio's calibration. Firmware is provided AS IS under the included licenses. Use transmission functions only where you are authorized to do so.
+Raw: **60,668 bytes**; packed: **60,686 bytes**; free FLASH: **772 bytes**.
+TX-CH requires no new EEPROM allocation. Profiles store gain/IF only, not DEV,
+CMP, MIC or Spectrum squelch/RSSI. Spectrum 6.25 kHz bandwidth is stored as Narrow.
+Old firmware before TXP0007 does not enforce the TX marker. Other processors/board
+revisions and third-party CPS tools are not established as compatible.
 
-## Build and reproducibility
+The field report is one owner's successful use, not exhaustive hardware coverage,
+RF certification or measured sensitivity. K5Prog's official binary was checked
+for provenance and source, not physically used by the assistant to flash a radio.
 
-The distributed image was compiled using MSYS2 UCRT64, arm-none-eabi GCC 16.1.0, the inherited Makefile options, and Python crcmod. Raw firmware uses 60,928 of the project's 61,440 flash bytes. Run `bash build-firmware.sh` with the ARM tools, make, and a Python environment containing crcmod available.
+## Source and tests
 
-The original local FAGCI archive had empty dependency directories. The build used CMSIS_5 and printf recovered from the supplied Egzumer 0.22 archive. This is disclosed in [dependency provenance](docs/DEPENDENCY_PROVENANCE.md). The complete release source snapshot contains those files. Do not claim that an unverified clone using the upstream submodule pins reproduces these exact inputs. This branch vendors the actual dependency snapshot directly; the original submodule metadata is archived in docs/upstream.gitmodules.txt.
+Build with `bash build-firmware.sh` using ARM GCC, make and Python crcmod.
+The branch vendors the actual CMSIS_5/printf dependency snapshot used in the build;
+see [dependency provenance](docs/DEPENDENCY_PROVENANCE.md). Later toolchain/build
+dates can change hashes; release checksums identify the distributed tested binaries.
 
-The firmware embeds compile date/time, so a later rebuild can have a different hash. The release hashes identify the distributed binaries, not a promise of bit-for-bit reproducibility on every compiler or date.
+Run `python -m unittest discover -s tests -v` with Unicorn and the ARM tools
+(ARM_BIN defaults to C:/msys64/ucrt64/bin). For validation_chirp tests set
+UVK5_FIRMWARE_DIR to this checkout, UVK5_DRIVER to chirp/uvk5_fagci_txm0008.py,
+and PYTHONPATH to an official CHIRP checkout plus Unicorn, then run
+`python -m unittest discover -s validation_chirp -v`.
+The 135 recorded tests are 70 firmware regressions and 65 CHIRP/ARM/TX/menu tests.
 
-## Tests and known limitations
+## Credits and licenses
 
-On Windows, install `tests/requirements.txt` in a Python environment and run `python -m unittest discover -s tests -v` after compiling. The test scripts default to `C:\msys64\ucrt64\bin`; ARM_BIN can override this path. The [test record](docs/TESTE_SPC0002.txt) describes the executed tests.
+Original authors retain their credits and notices. Firmware is Apache-2.0,
+printf MIT, CMSIS Apache-2.0; standalone CHIRP and K5Prog have separate GPL notices.
+See LICENSE, NOTICE, CREDITS.md, THIRD_PARTY_NOTICES.txt, chirp/COPYING_GPL3.txt,
+and tools/k5prog-win/v1.26/LICENSE. K5Prog upstream is OneOfEleven, based on Jacek
+Lipkowski's original k5prog. Local changes/documentation used Codex assistance.
+This is not an official FAGCI, Egzumer, IJV or Quansheng release; no endorsement is implied.
 
-- Normal menu 47 MODUL offers only FM/AM. Other modes are selected through F then 7 or Spectrum key 0.
-- Ordinary menu changes to an existing MR channel may require explicit MEM-CH confirmation to persist; see the help.
-- The legacy custom CHIRP module supplied during development approves OSFW-4dcc901 exactly. Its compatibility with OSFW-SPC0002 has not been verified; this release does not claim working CHIRP support.
-- Special LNAs/LNA/PGA/MIX/IF and other register adjustments are temporary.
-- AM-fix has not been replaced or tuned in this release.
-
-Report the firmware version, board revision, loader, exact steps, expected/actual results, and whether configuration/calibration were restored. Do not attach private EEPROM dumps or other people's channel/contact data to public issues.
-
-## License and credits
-
-The inherited firmware is Apache-2.0. Keep LICENSE, NOTICE, original copyright headers, and third-party licenses with redistributions. printf remains MIT. See [CREDITS.md](CREDITS.md) and THIRD_PARTY_NOTICES.txt. These notices do not imply upstream endorsement.
-
+Report reproducible problems via Issues and discuss ideas in Discussions. Do not
+post private EEPROM/calibration/contact backups in public reports.

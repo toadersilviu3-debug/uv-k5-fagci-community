@@ -52,6 +52,9 @@ class SpectrumRadio(Radio):
         for name in ('GetKey', 'SYSTEM_DelayMs', 'UART_LogSend'):
             self.uc.hook_add(UC_HOOK_CODE, self.peripheral,
                              begin=SYMS[name], end=SYMS[name])
+        if type(self) is SpectrumRadio:
+            self.uc.hook_add(UC_HOOK_CODE, self.peripheral,
+                begin=SYMS['BK4819_ReadRegister'], end=SYMS['BK4819_ReadRegister'])
         self.uc.hook_add(UC_HOOK_CODE, self.lcd, begin=SYMS['ST7565_BlitFullScreen'], end=SYMS['ST7565_BlitFullScreen'])
         if eeprom is None:
             self.eeprom[0xD60:0xD60 + 200] = b'\xff' * 200
@@ -66,6 +69,9 @@ class SpectrumRadio(Radio):
     def peripheral(self, uc, address, size, data):
         if address == SYMS['GetKey']:
             uc.reg_write(UC_ARM_REG_R0, self.input_key)
+        elif address == SYMS['BK4819_ReadRegister']:
+            reg = uc.reg_read(UC_ARM_REG_R0)
+            uc.reg_write(UC_ARM_REG_R0, {0x13: 0x3BE, 0x3D: 0x2AAB}.get(reg, 0))
         uc.reg_write(UC_ARM_REG_PC, uc.reg_read(UC_ARM_REG_LR))
 
     def sync_attributes(self):
@@ -167,6 +173,9 @@ class SpectrumSaveTests(unittest.TestCase):
                 radio.confirm()
                 expected = bytearray(before)
                 expected[slot * 16:slot * 16 + 16] = struct.pack('<II', 14552500, 0) + bytes([0, 0, 0, 0, 8, 0, 10, 0])
+                # TXP0007 preserves a destination's explicit RX-only flag.
+                if before[slot*16+15] & 0xf0 == 0xa0:
+                    expected[slot*16+15] |= 0xa0
                 expected[0xD60 + slot] = 0xC2  # VHF band, both scan lists
                 self.assertEqual(radio.eeprom, expected)
                 allowed = {slot * 16, slot * 16 + 8, 0xD60 + (slot & ~7)}
@@ -296,9 +305,9 @@ class SpectrumSaveTests(unittest.TestCase):
         radio.sync_attributes()
         radio.open_save(134000000)
         radio.set8('saveChannel', 199)
-        radio.call('Render')
+        radio.call('SPECTRUM_Render')
         radio.tap(KEY_MENU)
-        radio.call('Render')
+        radio.call('SPECTRUM_Render')
         for frame in radio.screens:
             self.assertEqual(len(frame), 896)
             self.assertEqual(frame[6 * 128:7 * 128], b'\0' * 128)

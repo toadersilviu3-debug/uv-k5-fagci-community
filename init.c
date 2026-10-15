@@ -15,6 +15,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include <stdint.h>
 
@@ -24,10 +28,10 @@ extern uint8_t flash_data_start[];
 extern uint8_t sram_data_start[];
 extern uint8_t sram_data_end[];
 
-void BSS_Init(void);
-void DATA_Init(void);
+__attribute__((noinline)) void BSS_Init(void);
+__attribute__((noinline)) void DATA_Init(void);
 
-void BSS_Init(void)
+__attribute__((noinline)) void BSS_Init(void)
 {
 	uint32_t *pBss;
 
@@ -36,7 +40,7 @@ void BSS_Init(void)
 	}
 }
 
-void DATA_Init(void)
+__attribute__((noinline)) void DATA_Init(void)
 {
 	volatile uint32_t *pDataRam = (volatile uint32_t *)sram_data_start;
 	volatile uint32_t *pDataFlash = (volatile uint32_t *)flash_data_start;

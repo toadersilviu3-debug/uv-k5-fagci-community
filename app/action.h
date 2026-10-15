@@ -13,6 +13,9 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, SOS0005: repeated Morse flashlight SOS.
+ * Original authors/license retained. See CHANGELOG.md.
+ */
 
 #ifndef APP_ACTION_H
 #define APP_ACTION_H
@@ -26,6 +29,8 @@ void ACTION_Scan(bool bFlag);
 void ACTION_Vox(void);
 //static void ACTION_AlarmOr1750(bool b1750)
 void ACTION_FM(void);
+
+void ACTION_FlashLightTick(void);
 
 void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
 

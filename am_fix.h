@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #ifndef AM_FIXH
 
@@ -22,9 +26,9 @@
 #ifdef ENABLE_AM_FIX
 	extern int16_t rssi_gain_diff[2];
 
-	void AM_fix_init(void);
-	void AM_fix_reset(const int vfo);
-	void AM_fix_10ms(const int vfo);
+	__attribute__((noinline)) void AM_fix_init(void);
+	__attribute__((noinline)) void AM_fix_reset(const int vfo);
+	__attribute__((noinline)) void AM_fix_10ms(const int vfo);
 		
 #endif
 

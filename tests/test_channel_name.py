@@ -284,7 +284,7 @@ class ChannelNameTests(unittest.TestCase):
         self.assertEqual(frame[3 * 128 + 127], 0)
 
     def test_previous_normal_menu_numbers_preserved(self):
-        self.assertEqual((RESET_MENU, NAME_MENU, NORMAL_COUNT, FULL_COUNT), (48, 49, 50, 56))
+        self.assertEqual((RESET_MENU, NAME_MENU, NORMAL_COUNT, FULL_COUNT), (48, 49, 51, 57))
         self.assertEqual(SCREN_MENU + 1, FULL_COUNT)
 
     def test_packed_firmware_payload_and_crc(self):
@@ -297,8 +297,10 @@ class ChannelNameTests(unittest.TestCase):
         key = bytes(a ^ b for a, b in zip(plain[:128], packed[:128]))
         decoded = bytes(value ^ key[i % 128] for i, value in enumerate(packed[:-2]))
         self.assertEqual(decoded[:0x2000] + decoded[0x2010:], plain)
-        self.assertEqual(decoded[0x2000:0x2010], b'*OSFW-SPC0002'.ljust(16, b'\0'))
+        self.assertEqual(decoded[0x2000:0x2010], b'*OSFW-TXM0008'.ljust(16, b'\0'))
 
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
+

@@ -13,10 +13,20 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
+/* Modified 2026-10-14, SOS0005: repeated Morse flashlight SOS.
+ * Original authors/license retained. See CHANGELOG.md.
+ */
 
 #include "app/action.h"
 #include "app/app.h"
 #include "app/dtmf.h"
+#include "app/menu.h"
+#include "app/finput.h"
+#include "ui/menu.h"
 #if defined(ENABLE_FMRADIO)
 #include "app/fm.h"
 #endif
@@ -32,6 +42,8 @@
 #include "ui/inputbox.h"
 #include "ui/ui.h"
 
+static uint8_t sosPosition, sosRemaining;
+
 static void ACTION_FlashLight(void) {
   switch (gFlashLightState) {
   case 0:
@@ -40,11 +52,30 @@ static void ACTION_FlashLight(void) {
     break;
   case 1:
     gFlashLightState++;
+    sosPosition = 0;
+    sosRemaining = 0;
+    GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
     break;
   default:
     gFlashLightState = 0;
     GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
   }
+}
+
+// Modified 2026-10-14, SOS0005: repeated SOS, one Morse unit per 160 ms tick.
+__attribute__((noinline)) void ACTION_FlashLightTick(void) {
+  static const uint8_t durations[] = {
+    1,1,1,1,1,3, 3,1,3,1,3,3, 1,1,1,1,1,7
+  };
+  if (gFlashLightState != FLASHLIGHT_BLINK)
+    return;
+  if (!sosRemaining) {
+    GPIO_FlipBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
+    sosRemaining = durations[sosPosition++];
+    if (sosPosition == sizeof(durations))
+      sosPosition = 0;
+  }
+  sosRemaining--;
 }
 
 void ACTION_Power(void) {
@@ -159,7 +190,7 @@ void ACTION_FM(void) {
 }
 #endif
 
-void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
+__attribute__((noinline)) void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
   uint8_t Short;
   uint8_t Long;
 
@@ -179,6 +210,19 @@ void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
       gDTMF_InputMode = false;
     }
     gPttWasReleased = true;
+    return;
+  }
+
+  // Modified 2026-10-14: VFO0003 long-SK2 memory-save shortcut.
+  // Keep short presses and the configured action outside VFO unchanged.
+  if (Key == KEY_SIDE2 && bKeyPressed && bKeyHeld &&
+      gScreenToDisplay == DISPLAY_MAIN && IS_FREQ_CHANNEL(gTxVfo->CHANNEL_SAVE)) {
+    if (gCurrentFunction == FUNCTION_TRANSMIT || gEeprom.KEY_LOCK ||
+        gScanState != SCAN_OFF || gCssScanMode != CSS_SCAN_MODE_OFF ||
+        freqInputIndex || gInputBoxIndex)
+      gBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;
+    else
+      MENU_BeginVfoSave();
     return;
   }
 
@@ -232,3 +276,4 @@ void ACTION_Handle(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
     break;
   }
 }
+

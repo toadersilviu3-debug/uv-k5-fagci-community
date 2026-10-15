@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include "battery.h"
 #include <string.h>
@@ -30,7 +34,7 @@
 #include "../ui/helper.h"
 #include "status.h"
 
-void UI_DisplayStatus(void) {
+__attribute__((noinline)) void UI_DisplayStatus(void) {
   memset(gStatusLine, 64, sizeof(gStatusLine));
 
   if (gBatteryDisplayLevel < 2) {

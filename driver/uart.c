@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include <stdbool.h>
 #include "bsp/dp32g030/dma.h"
@@ -96,7 +100,7 @@ void UART_Send(const void *pBuffer, uint32_t Size)
 	}
 }
 
-void UART_LogSend(const void *pBuffer, uint32_t Size)
+__attribute__((noinline)) void UART_LogSend(const void *pBuffer, uint32_t Size)
 {
 	if (UART_IsLogEnabled) {
 		UART_Send(pBuffer, Size);

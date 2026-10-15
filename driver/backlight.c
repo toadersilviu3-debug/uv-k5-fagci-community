@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include "backlight.h"
 #include "bsp/dp32g030/gpio.h"
@@ -21,7 +25,7 @@
 
 uint8_t gBacklightCountdown;
 
-void BACKLIGHT_TurnOn(void) {
+__attribute__((noinline)) void BACKLIGHT_TurnOn(void) {
   if (gEeprom.BACKLIGHT > 0) {
     GPIO_SetBit(&GPIOB->DATA, GPIOB_PIN_BACKLIGHT);
 

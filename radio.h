@@ -1,3 +1,4 @@
+/* Modified 2026-10-14 for TXP0007: persistent per-memory TX inhibition. */
 /* Copyright 2023 Dual Tachyon
  * https://github.com/DualTachyon
  *
@@ -13,6 +14,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #ifndef RADIO_H
 #define RADIO_H
@@ -127,6 +132,9 @@ typedef struct VFO_Info_t {
   uint8_t AM_CHANNEL_MODE;
   ModulationType ModulationType;
   char Name[16];
+  uint16_t RxGain, RxIF;
+  bool RxManual;
+  bool TxInhibit; // Per-memory RX-only flag, separate from global TX limits.
 } VFO_Info_t;
 
 extern VFO_Info_t *gTxVfo;
@@ -153,6 +161,7 @@ uint32_t GetOffsetedF(VFO_Info_t *pInfo, uint32_t f);
 void RADIO_ApplyOffset(VFO_Info_t *pInfo);
 void RADIO_SelectVfos(void);
 void RADIO_SetupRegisters(bool bSwitchToFunction0);
+void RADIO_ApplyRxProfile(void);
 void RADIO_SetTxParameters(void);
 
 void RADIO_SetVfoState(VfoState_t State);

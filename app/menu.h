@@ -28,6 +28,7 @@ int MENU_GetLimits(uint8_t Cursor, uint8_t *pMin, uint8_t *pMax);
 void MENU_AcceptSetting(void);
 void MENU_SelectNextCode(void);
 void MENU_ShowCurrentSetting(void);
+void MENU_BeginVfoSave(void);
 void MENU_StartCssScan(int8_t Direction);
 void MENU_StopCssScan(void);
 
@@ -36,6 +37,7 @@ void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld);
 extern char gMenuChannelName[11];
 extern uint8_t gMenuNamePosition;
 extern uint8_t gMenuNameChannel;
+extern uint8_t gMenuTxChannel;
 
 #endif
 

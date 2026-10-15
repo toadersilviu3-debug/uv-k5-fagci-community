@@ -1,3 +1,4 @@
+/* Modified 2026-10-14 for TXP0007: persistent per-memory TX inhibition. */
 /* Copyright 2023 Dual Tachyon
  * https://github.com/DualTachyon
  *
@@ -13,6 +14,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include "frequencies.h"
 #include "misc.h"
@@ -34,7 +39,7 @@ const uint16_t StepFrequencyTable[12] = {
     250, 500, 625, 833, 1000, 1250, 2500, 10000,
 };
 
-FREQUENCY_Band_t FREQUENCY_GetBand(uint32_t Frequency) {
+__attribute__((noinline)) FREQUENCY_Band_t FREQUENCY_GetBand(uint32_t Frequency) {
   for (int i = 0; i < ARRAY_SIZE(FrequencyBandTable); i++) {
     if (Frequency >= FrequencyBandTable[i].lower &&
         Frequency <= FrequencyBandTable[i].upper) {
@@ -121,8 +126,8 @@ bool IsTXAllowed(uint32_t Frequency) {
   return false;
 }
 
-bool FREQUENCY_Check(VFO_Info_t *pInfo) {
-  if (pInfo->CHANNEL_SAVE > FREQ_CHANNEL_LAST) {
+__attribute__((noinline)) bool FREQUENCY_Check(VFO_Info_t *pInfo) {
+  if (pInfo->TxInhibit || pInfo->CHANNEL_SAVE > FREQ_CHANNEL_LAST) {
     return false;
   }
 

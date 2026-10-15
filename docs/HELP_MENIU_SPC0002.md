@@ -133,7 +133,7 @@ Salvarea nu selectează automat noul canal în ecranul principal. După ieșirea
 
 ## Opțiunile speciale 51–56
 
-Aceste opțiuni apar în modul special accesat pornind stația cu **Side Key 1** ținut apăsat. Ele configurează permisiunile de emisie și funcția globală scrambling; nu sunt reglaje de sensibilitate AERO sau AGC AM.
+Aceste opțiuni apar în modul special accesat pornind stația cu **PTT + Side Key 1** ținute apăsate simultan. Side Key 1 este butonul mic imediat sub PTT. Eliberează ambele butoane când apare meniul **51 - 350TX**. Ele configurează permisiunile de emisie și funcția globală scrambling; nu sunt reglaje de sensibilitate AERO sau AGC AM.
 
 | Nr. | Afișaj | Funcție | Valori |
 |---:|---|---|---|
@@ -158,3 +158,4 @@ Aceste opțiuni apar în modul special accesat pornind stația cu **Side Key 1**
 - **Side Key 2 în Spectrum:** alegerea slotului pentru salvare.
 
 Acesta este un ghid extern pentru versiunea existentă. Nu a fost adăugat un ecran HELP în firmware și nu s-a schimbat comportamentul tastei M prin generarea documentului.
+

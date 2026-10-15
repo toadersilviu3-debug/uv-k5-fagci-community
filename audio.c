@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #if defined(ENABLE_FMRADIO)
 #include "app/fm.h"
@@ -32,7 +36,7 @@
 #include "ui/ui.h"
 BEEP_Type_t gBeepToPlay;
 
-void AUDIO_PlayBeep(BEEP_Type_t Beep) {
+__attribute__((noinline)) void AUDIO_PlayBeep(BEEP_Type_t Beep) {
   uint16_t ToneConfig;
   uint16_t ToneFrequency;
   uint16_t Duration;

@@ -76,6 +76,7 @@ enum {
 	MENU_DEL_CH,
 	MENU_RESET,
 	MENU_NAME,
+	MENU_TX_CH, // TXM0008: normal menu, persistent per-memory TX permission.
 	MENU_350TX,
 	MENU_F_LOCK,
 	MENU_200TX,

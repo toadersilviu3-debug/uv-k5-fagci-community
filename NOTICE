@@ -9,3 +9,9 @@ The Egzumer AM controller has not been ported into SPC0002.
 
 This community fork is not an official FAGCI, Egzumer, or Quansheng release.
 These project names describe provenance and do not imply endorsement.
+
+AMH0004 experimental modifications, 2026-10-14: normal AM RX fixed-slot hardware AGC integration and Spectrum automatic-AGC boundary handling. FAGCI AM-fix controller and gain table remain unchanged.
+
+SOS0005 modifications, 2026-10-14: replace flashlight blinking with scheduler-driven Morse SOS. Original authors and license notices retained.
+
+RXP0006 modifications, 2026-10-14: explicit Spectrum manual RX profiles, persistence/reload, AGC isolation, and build-size optimization. Original authors/licenses retained.

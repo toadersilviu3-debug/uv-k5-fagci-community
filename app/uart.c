@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include <string.h>
 #if !defined(ENABLE_OVERLAY)
@@ -460,7 +464,7 @@ uint64_t xtou64(const char *str) {
   return res;
 }
 
-bool UART_IsCommandAvailable(void) {
+__attribute__((noinline)) bool UART_IsCommandAvailable(void) {
   uint16_t DmaLength;
   uint16_t CommandLength;
   uint16_t Index;

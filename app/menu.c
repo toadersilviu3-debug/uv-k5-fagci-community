@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 /* Modified 2026-10-13 in the independent SPC0002 community fork.
  * Added NAME editing, cancellation, and dedicated name-only persistence.
  * Original copyright/license notices are retained. See CHANGELOG.md.
@@ -48,6 +52,8 @@
 char gMenuChannelName[11];
 uint8_t gMenuNamePosition;
 uint8_t gMenuNameChannel = 0xFF;
+// Modified 2026-10-14, TXM0008: pin TX-CH to the memory selected on entry.
+uint8_t gMenuTxChannel = 0xFF;
 
 static void MENU_LoadChannelName(void) {
   gMenuNamePosition = 0;
@@ -163,6 +169,7 @@ int MENU_GetLimits(uint8_t Cursor, uint8_t *pMin, uint8_t *pMax) {
     *pMax = 50;
     break;
   case MENU_W_N:
+  case MENU_TX_CH:
   case MENU_BCL:
   case MENU_BEEP:
   case MENU_AUTOLK:
@@ -228,7 +235,7 @@ int MENU_GetLimits(uint8_t Cursor, uint8_t *pMin, uint8_t *pMax) {
   return 0;
 }
 
-void MENU_AcceptSetting(void) {
+__attribute__((noinline)) void MENU_AcceptSetting(void) {
   uint8_t Min, Max;
   uint8_t Code;
   FREQ_Config_t *pConfig = &gTxVfo->ConfigRX;
@@ -242,6 +249,11 @@ void MENU_AcceptSetting(void) {
   }
 
   switch (gMenuCursor) {
+  case MENU_TX_CH:
+    if (!SETTINGS_SetChannelTxEnabled(gMenuTxChannel, gSubMenuSelection))
+      gBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;
+    gUpdateDisplay = true;
+    return;
   case MENU_NAME:
     if (!SETTINGS_SaveChannelName(gMenuNameChannel, gMenuChannelName))
       gBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;
@@ -595,8 +607,32 @@ static void MENU_ClampSelection(int8_t Direction) {
   }
 }
 
-void MENU_ShowCurrentSetting(void) {
+// Modified 2026-10-14: reuse MEM-CH and its two-press confirmation.
+void MENU_BeginVfoSave(void) {
+  GUI_SelectNextDisplay(DISPLAY_MENU);
+  gMenuCursor = MENU_MEM_CH;
+  gSubMenuSelection = 0;
+  for (uint8_t i = 0; i < 200; i++) {
+    if (!RADIO_CheckValidChannel(i, false, 0)) {
+      gSubMenuSelection = i;
+      break;
+    }
+  }
+  gIsInSubMenu = true;
+  gAskForConfirmation = 0;
+  gFlagRefreshSetting = false;
+  gRequestDisplayScreen = DISPLAY_MENU;
+}
+
+__attribute__((noinline)) void MENU_ShowCurrentSetting(void) {
   switch (gMenuCursor) {
+  case MENU_TX_CH:
+    gMenuTxChannel = gTxVfo->CHANNEL_SAVE;
+    if (!IS_MR_CHANNEL(gMenuTxChannel) ||
+        !RADIO_CheckValidChannel(gMenuTxChannel, false, 0))
+      gMenuTxChannel = 0xFF;
+    gSubMenuSelection = !gTxVfo->TxInhibit;
+    break;
   case MENU_NAME:
     MENU_LoadChannelName();
     break;
@@ -982,6 +1018,13 @@ static void MENU_Key_MENU(bool bKeyPressed, bool bKeyHeld) {
     gBeepToPlay = BEEP_1KHZ_60MS_OPTIONAL;
     gRequestDisplayScreen = DISPLAY_MENU;
     if (!gIsInSubMenu) {
+      if (gMenuCursor == MENU_TX_CH) {
+        MENU_ShowCurrentSetting();
+        if (gMenuTxChannel == 0xFF) {
+          gBeepToPlay = BEEP_500HZ_60MS_DOUBLE_BEEP_OPTIONAL;
+          return;
+        }
+      }
       if (gMenuCursor == MENU_NAME) {
         MENU_LoadChannelName();
         if (gMenuNameChannel == 0xFF) {
@@ -1076,6 +1119,9 @@ static void MENU_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld,
     return;
   }
 
+  if (gMenuCursor == MENU_MEM_CH)
+    gAskForConfirmation = 0;
+
   if (gMenuCursor == MENU_OFFSET) {
     int32_t Offset;
 
@@ -1119,7 +1165,10 @@ static void MENU_Key_UP_DOWN(bool bKeyPressed, bool bKeyHeld,
   gRequestDisplayScreen = DISPLAY_MENU;
 }
 
-void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
+__attribute__((noinline)) void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
+  if (gMenuCursor == MENU_TX_CH && gIsInSubMenu &&
+      (Key == KEY_PTT || Key == KEY_SIDE1 || Key == KEY_SIDE2 || Key == KEY_F))
+    return;
   if (gMenuCursor == MENU_NAME && gIsInSubMenu) {
     MENU_Key_ChannelName(Key, bKeyPressed, bKeyHeld);
     return;
@@ -1135,6 +1184,8 @@ void MENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
   case KEY_7:
   case KEY_8:
   case KEY_9:
+    if (gMenuCursor == MENU_MEM_CH && bKeyPressed && !bKeyHeld)
+      gAskForConfirmation = 0;
     MENU_Key_DIGITS(Key, bKeyPressed, bKeyHeld);
     break;
   case KEY_MENU:

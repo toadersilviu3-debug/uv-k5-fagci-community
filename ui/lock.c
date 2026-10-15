@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include "ARMCM0.h"
 #include <string.h>
@@ -28,7 +32,7 @@
 #include "inputbox.h"
 #include "lock.h"
 
-static void Render(void) {
+__attribute__((noinline)) static void Render(void) {
   char String[7];
   uint8_t i;
 

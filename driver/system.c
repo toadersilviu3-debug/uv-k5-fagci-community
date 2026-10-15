@@ -13,13 +13,17 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include "bsp/dp32g030/pmu.h"
 #include "bsp/dp32g030/syscon.h"
 #include "driver/system.h"
 #include "driver/systick.h"
 
-void SYSTEM_DelayMs(uint32_t Delay)
+__attribute__((noinline)) void SYSTEM_DelayMs(uint32_t Delay)
 {
 	SYSTICK_DelayUs(Delay * 1000);
 }

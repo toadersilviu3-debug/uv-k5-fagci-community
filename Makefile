@@ -1,3 +1,4 @@
+# TXM0008: LTO and section collection; preserve tested call boundaries.
 TARGET = firmware
 
 ENABLE_AIRCOPY := 0
@@ -135,7 +136,7 @@ ASFLAGS = -c -mcpu=cortex-m0
 ifeq ($(ENABLE_OVERLAY),1)
 ASFLAGS += -DENABLE_OVERLAY
 endif
-CFLAGS = -Os -Wall -Werror -mcpu=cortex-m0 -fno-builtin -fshort-enums -fno-delete-null-pointer-checks -std=c11 -MMD
+CFLAGS = -flto -fno-ipa-cp -fno-ipa-sra -ffunction-sections -fdata-sections -Os -Wall -Werror -mcpu=cortex-m0 -fno-builtin -fshort-enums -fno-delete-null-pointer-checks -std=c11 -MMD
 CFLAGS += -DPRINTF_INCLUDE_CONFIG_H
 CFLAGS += -DGIT_HASH=\"$(GIT_HASH)\"
 ifeq ($(ENABLE_AIRCOPY),1)
@@ -162,7 +163,7 @@ endif
 ifeq ($(ENABLE_UART),1)
 CFLAGS += -DENABLE_UART
 endif
-LDFLAGS = -mcpu=cortex-m0 -nostartfiles -Wl,-T,firmware.ld
+LDFLAGS = -flto -Wl,--gc-sections -mcpu=cortex-m0 -nostartfiles -Wl,-T,firmware.ld
 ifeq ($(ENABLE_NOSCANTIMEOUT),1)
 CFLAGS += -DENABLE_NOSCANTIMEOUT
 endif
@@ -230,4 +231,6 @@ bsp/dp32g030/%.h: hardware/dp32g030/%.def
 
 clean:
 	rm -f $(TARGET).bin $(TARGET) $(OBJS) $(DEPS)
+
+
 

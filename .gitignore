@@ -8,3 +8,9 @@ sram-overlay
 sram-overlay.bin
 __pycache__/
 
+
+# Private radio backups must stay local.
+*.img
+my_calibration*
+my_config*
+*.ini

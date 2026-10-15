@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 /* Modified 2026-10-13 in the independent SPC0002 community fork.
  * Added NAME menu entry and ten-character editor display.
  * Original copyright/license notices are retained. See CHANGELOG.md.
@@ -94,6 +98,7 @@ static const char MenuList[][7] = {
     "DEL-CH",
     "RESET",
     "NAME",
+    "TX-CH", // Modified 2026-10-14, TXM0008.
     "350TX",
     "F-LOCK",
     "200TX",
@@ -190,7 +195,7 @@ uint8_t gMenuCursor;
 int8_t gMenuScrollDirection;
 uint32_t gSubMenuSelection;
 
-void UI_DisplayMenu(void) {
+__attribute__((noinline)) void UI_DisplayMenu(void) {
   char String[16];
   char Contact[16];
   uint8_t i;
@@ -228,6 +233,20 @@ void UI_DisplayMenu(void) {
   }
 
   memset(String, 0, sizeof(String));
+
+  if (gMenuCursor == MENU_TX_CH) {
+    if (gMenuTxChannel == 0xFF) {
+      UI_PrintStringSmall("MR ONLY", 58, 0, 2);
+    } else {
+      sprintf(String, "CH-%03u", gMenuTxChannel + 1);
+      UI_PrintStringSmall(String, 58, 0, 0);
+      UI_PrintString(offOn[gSubMenuSelection], 50, 127, 2, 8, true);
+      if (gSetting_ALL_TX == 2)
+        UI_PrintStringSmall("GLOBAL OFF", 58, 0, 4);
+    }
+    ST7565_BlitFullScreen();
+    return;
+  }
 
   if (gMenuCursor == MENU_NAME) {
     if (gMenuNameChannel == 0xFF) {

@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include <string.h>
 #include "app/dtmf.h"
@@ -39,7 +43,7 @@ uint8_t gAskForConfirmation;
 bool gAskToSave;
 bool gAskToDelete;
 
-void GUI_DisplayScreen(void)
+__attribute__((noinline)) void GUI_DisplayScreen(void)
 {
 	switch (gScreenToDisplay) {
 	case DISPLAY_MAIN:

@@ -1,3 +1,4 @@
+/* Modified 2026-10-14 for TXP0007: persistent per-memory TX inhibition. */
 /* Copyright 2023 Dual Tachyon
  * https://github.com/DualTachyon
  *
@@ -13,6 +14,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include "app/dtmf.h"
 #include "helper/measurements.h"
@@ -139,7 +144,7 @@ void RADIO_InitInfo(VFO_Info_t *pInfo, uint8_t ChannelSave, uint8_t Band,
   RADIO_ConfigureSquelchAndOutputPower(pInfo);
 }
 
-void RADIO_ConfigureChannel(uint8_t VFO, uint32_t Arg) {
+__attribute__((noinline)) void RADIO_ConfigureChannel(uint8_t VFO, uint32_t Arg) {
   VFO_Info_t *pRadio;
   uint8_t Channel;
   uint8_t Attributes;
@@ -151,6 +156,8 @@ void RADIO_ConfigureChannel(uint8_t VFO, uint32_t Arg) {
   uint32_t Frequency;
 
   pRadio = &gEeprom.VfoInfo[VFO];
+  pRadio->RxManual = false;
+  pRadio->TxInhibit = false;
 
   Channel = gEeprom.ScreenChannel[VFO];
   if (IS_VALID_CHANNEL(Channel)) {
@@ -224,6 +231,12 @@ void RADIO_ConfigureChannel(uint8_t VFO, uint32_t Arg) {
     gEeprom.VfoInfo[VFO].StepFrequency = StepFrequencyTable[Tmp];
 
     Tmp = Data[7];
+    // Valid legacy scrambling values are 0..10; 0xFF means unset.
+    // 0xA0..0xAA encodes RX-only plus the unchanged scrambling index.
+    if (IS_MR_CHANNEL(Channel) && (Tmp & 0xF0) == 0xA0) {
+      pRadio->TxInhibit = true;
+      Tmp &= 0x0F;
+    }
     if (Tmp > 10) {
       Tmp = 0;
     }
@@ -332,8 +345,12 @@ void RADIO_ConfigureChannel(uint8_t VFO, uint32_t Arg) {
     // 16 bytes allocated but only 12 used
     EEPROM_ReadBuffer(0x0F50 + (Channel * 0x10), gEeprom.VfoInfo[VFO].Name + 0,
                       8);
-    EEPROM_ReadBuffer(0x0F58 + (Channel * 0x10), gEeprom.VfoInfo[VFO].Name + 8,
-                      2);
+    EEPROM_ReadBuffer(0x0F58 + (Channel * 0x10), Data, 8);
+    memcpy(pRadio->Name + 8, Data, 2);
+    pRadio->RxGain = Data[2] | (Data[3] << 8);
+    pRadio->RxIF = Data[4] | (Data[5] << 8);
+    pRadio->RxManual = Data[6] == 0x52 && Data[7] == 0x58 &&
+                       pRadio->RxGain <= 0x03FF;
   }
 
   if (!gEeprom.VfoInfo[VFO].FrequencyReverse) {
@@ -455,11 +472,33 @@ void RADIO_SelectVfos(void) {
   RADIO_SelectCurrentVfo();
 }
 
-void RADIO_SetupRegisters(bool bSwitchToFunction0) {
+void RADIO_ApplyRxProfile(void) {
+  static bool manualWasApplied;
+  if (gRxVfo->RxManual) {
+    BK4819_WriteRegister(BK4819_REG_13, gRxVfo->RxGain);
+    BK4819_WriteRegister(0x3D, gRxVfo->RxIF);
+  } else if (manualWasApplied) {
+    // Restore AUTO defaults before detection on the next channel.
+    BK4819_WriteRegister(BK4819_REG_13, 0x03BE);
+    BK4819_WriteRegister(0x3D, gRxVfo->ModulationType == MOD_USB ? 0 : 0x2AAB);
+  }
+  manualWasApplied = gRxVfo->RxManual;
+}
+
+__attribute__((noinline)) void RADIO_SetupRegisters(bool bSwitchToFunction0) {
   BK4819_FilterBandwidth_t Bandwidth;
   uint16_t Status;
   uint16_t InterruptMask;
   uint32_t Frequency;
+
+#ifdef ENABLE_AM_FIX
+  // Modified 2026-10-14, AMH0004: give software AM-fix exclusive control
+  // of gain table slot 3 (REG_13). Restore automatic AGC outside AM.
+  // Preserve REG_7E bits 11:0; do not change the FAGCI gain table.
+  BK4819_WriteRegister(BK4819_REG_7E,
+      (BK4819_ReadRegister(BK4819_REG_7E) & 0x0FFFu) |
+      ((gRxVfo->ModulationType == MOD_AM || gRxVfo->RxManual) ? 0xB000u : 0x3000u));
+#endif
 
   GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
   gEnableSpeaker = false;
@@ -566,6 +605,7 @@ void RADIO_SetupRegisters(bool bSwitchToFunction0) {
   BK4819_WriteRegister(0x40, (BK4819_ReadRegister(0x40) & ~(0b11111111111)) |
                                  0b10110101010);
 
+  RADIO_ApplyRxProfile();
   FUNCTION_Init();
 
   if (bSwitchToFunction0) {
@@ -573,7 +613,10 @@ void RADIO_SetupRegisters(bool bSwitchToFunction0) {
   }
 }
 
-void RADIO_SetTxParameters(void) {
+__attribute__((noinline)) void RADIO_SetTxParameters(void) {
+  if (gCurrentVfo->TxInhibit) {
+    return;
+  }
   BK4819_FilterBandwidth_t Bandwidth;
 
   GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
@@ -587,6 +630,10 @@ void RADIO_SetTxParameters(void) {
   }
   BK4819_SetFilterBandwidth(Bandwidth);
   BK4819_SetFrequency(gCurrentVfo->pTX->Frequency);
+  if (gCurrentVfo->RxManual) {
+    BK4819_WriteRegister(BK4819_REG_13, 0x03BE);
+    BK4819_WriteRegister(0x3D, gCurrentVfo->ModulationType == MOD_USB ? 0 : 0x2AAB);
+  }
   BK4819_PrepareTransmit();
   SYSTEM_DelayMs(10);
 
@@ -653,7 +700,7 @@ void RADIO_PrepareTX(void) {
   }
   RADIO_SelectCurrentVfo();
 #if defined(ENABLE_TX1750)
-  if (gAlarmState == ALARM_STATE_OFF
+  if (gCurrentVfo->TxInhibit || gAlarmState == ALARM_STATE_OFF
       || gAlarmState == ALARM_STATE_TX1750
   ) {
 #else
@@ -758,3 +805,5 @@ void RADIO_SendEndOfTransmission(void) {
   }
   BK4819_ExitDTMF_TX(true);
 }
+
+

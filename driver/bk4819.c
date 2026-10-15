@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include "bk4819.h"
 #include "../bsp/dp32g030/gpio.h"
@@ -92,7 +96,7 @@ static uint16_t BK4819_ReadU16(void) {
   return Value;
 }
 
-uint16_t BK4819_ReadRegister(BK4819_REGISTER_t Register) {
+__attribute__((noinline)) uint16_t BK4819_ReadRegister(BK4819_REGISTER_t Register) {
   uint16_t Value;
 
   GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_BK4819_SCN);
@@ -112,7 +116,7 @@ uint16_t BK4819_ReadRegister(BK4819_REGISTER_t Register) {
   return Value;
 }
 
-void BK4819_WriteRegister(BK4819_REGISTER_t Register, uint16_t Data) {
+__attribute__((noinline)) void BK4819_WriteRegister(BK4819_REGISTER_t Register, uint16_t Data) {
   GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_BK4819_SCN);
   GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_BK4819_SCL);
   SYSTICK_DelayUs(1);
@@ -369,7 +373,7 @@ void BK4819_SetRegValue(RegisterSpec s, uint16_t v) {
   BK4819_WriteRegister(s.num, reg | (v << s.offset));
 }
 
-void BK4819_SetModulation(ModulationType type) {
+__attribute__((noinline)) void BK4819_SetModulation(ModulationType type) {
   const uint8_t modTypeReg47Values[] = {1, 7, 5, 9, 4};
 
   BK4819_SetAF(modTypeReg47Values[type]);
@@ -533,7 +537,7 @@ void BK4819_ExitBypass(void) {
   BK4819_WriteRegister(BK4819_REG_7E, 0x302E);
 }
 
-void BK4819_PrepareTransmit(void) {
+__attribute__((noinline)) void BK4819_PrepareTransmit(void) {
   BK4819_ExitBypass();
   BK4819_ExitTxMute();
   BK4819_TxOn_Beep();
@@ -733,7 +737,7 @@ void BK4819_EnableCTCSS(void) {
   BK4819_WriteRegister(BK4819_REG_51, 0x904A);
 }
 
-uint16_t BK4819_GetRSSI(void) {
+__attribute__((noinline)) uint16_t BK4819_GetRSSI(void) {
   return BK4819_ReadRegister(BK4819_REG_67) & 0x01FF;
 }
 

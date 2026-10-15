@@ -194,6 +194,7 @@ void SETTINGS_SaveVfoIndices(void);
 void SETTINGS_SaveSettings(void);
 void SETTINGS_SaveChannel(uint8_t Channel, uint8_t VFO, const VFO_Info_t *pVFO, uint8_t Mode);
 bool SETTINGS_SaveChannelName(uint8_t Channel, const char *Name);
+bool SETTINGS_SetChannelTxEnabled(uint8_t Channel, bool Enabled);
 void SETTINGS_UpdateChannel(uint8_t Channel, const VFO_Info_t *pVFO, bool bUpdate);
 
 #endif

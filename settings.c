@@ -1,3 +1,4 @@
+/* Modified 2026-10-14 for TXP0007: persistent per-memory TX inhibition. */
 /* Copyright 2023 Dual Tachyon
  * https://github.com/DualTachyon
  *
@@ -13,6 +14,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 /* Modified 2026-10-13 in the independent SPC0002 community fork.
  * Added name-only EEPROM persistence preserving six reserved slot bytes.
  * Original copyright/license notices are retained. See CHANGELOG.md.
@@ -184,7 +189,7 @@ void SETTINGS_SaveSettings(void)
 }
 
 // Rename only: preserve channel parameters and the six reserved slot bytes.
-bool SETTINGS_SaveChannelName(uint8_t Channel, const char *Name)
+__attribute__((noinline)) bool SETTINGS_SaveChannelName(uint8_t Channel, const char *Name)
 {
 	uint8_t Slot[16], Original[16];
 	uint8_t Length = 10;
@@ -212,7 +217,46 @@ bool SETTINGS_SaveChannelName(uint8_t Channel, const char *Name)
 	return true;
 }
 
-void SETTINGS_SaveChannel(uint8_t Channel, uint8_t VFO, const VFO_Info_t *pVFO, uint8_t Mode)
+// Modified 2026-10-14, TXM0008: update only the existing TX flag byte.
+__attribute__((noinline)) bool SETTINGS_SetChannelTxEnabled(uint8_t Channel, bool Enabled) {
+  if (!IS_MR_CHANNEL(Channel) || !RADIO_CheckValidChannel(Channel, false, 0))
+    return false;
+  uint8_t block[8];
+  const uint16_t address = Channel * 16 + 8;
+  EEPROM_ReadBuffer(address, block, sizeof(block));
+  uint8_t scramble = block[7];
+  if ((scramble & 0xF0) == 0xA0) scramble &= 0x0F;
+  if (scramble > 10) scramble = 0;
+  const uint8_t value = scramble | (Enabled ? 0 : 0xA0);
+  if (block[7] != value) {
+    block[7] = value;
+    EEPROM_WriteBuffer(address, block);
+  }
+  for (uint8_t vfo = 0; vfo < 2; vfo++)
+    if (gEeprom.VfoInfo[vfo].CHANNEL_SAVE == Channel)
+      gEeprom.VfoInfo[vfo].TxInhibit = !Enabled;
+  return true;
+}
+
+// RXP0006: the six bytes after the ten-character name hold an optional
+// RX-only profile: gain (10 bits), IF (16 bits), and marker bytes 52 58.
+static void SETTINGS_SaveRxProfile(uint8_t Channel, const VFO_Info_t *pVFO) {
+  uint16_t slot[4];
+  const uint16_t address = 0x0F58 + Channel * 16;
+  EEPROM_ReadBuffer(address, slot, 8);
+  if (pVFO->RxManual) {
+    slot[1] = pVFO->RxGain & 0x03FF;
+    slot[2] = pVFO->RxIF;
+    slot[3] = 0x5852;
+  } else {
+    if (slot[3] != 0x5852)
+      return;
+    slot[3] = 0xFFFF;
+  }
+  EEPROM_WriteBuffer(address, slot);
+}
+
+__attribute__((noinline)) void SETTINGS_SaveChannel(uint8_t Channel, uint8_t VFO, const VFO_Info_t *pVFO, uint8_t Mode)
 {
 #if defined(ENABLE_UART)
 	UART_LogSend("schn\r\n", 6);
@@ -253,13 +297,24 @@ void SETTINGS_SaveChannel(uint8_t Channel, uint8_t VFO, const VFO_Info_t *pVFO, 
 				;
 			State8[5] = (pVFO->DTMF_PTT_ID_TX_MODE << 1) | pVFO->DTMF_DECODING_ENABLE;
 			State8[6] = pVFO->STEP_SETTING;
-			State8[7] = pVFO->SCRAMBLING_TYPE;
+            bool inhibit = false;
+            if (IS_MR_CHANNEL(Channel)) {
+                uint8_t previous[8];
+                EEPROM_ReadBuffer(OffsetMR + 8, previous, 8);
+                // Saving from Spectrum/VFO must not silently unlock a slot.
+                // Explicit CHIRP TX enable clears the EEPROM marker directly.
+                inhibit = pVFO->TxInhibit ||
+                    ((gMR_ChannelAttributes[Channel] & MR_CH_BAND_MASK) < 7 &&
+                     (previous[7] & 0xF0) == 0xA0);
+            }
+			State8[7] = pVFO->SCRAMBLING_TYPE | (inhibit ? 0xA0 : 0);
 
 			EEPROM_WriteBuffer(OffsetVFO + 8, State8);
 
 			SETTINGS_UpdateChannel(Channel, pVFO, true);
 
 			if (IS_MR_CHANNEL(Channel)) {
+                SETTINGS_SaveRxProfile(Channel, pVFO);
 #ifndef ENABLE_KEEPNAMEONSAVE					
 				memset(&State32, 0xFF, sizeof(State32));
 				EEPROM_WriteBuffer(OffsetMR + 0x0F50, State32);

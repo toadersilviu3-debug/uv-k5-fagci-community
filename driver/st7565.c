@@ -13,6 +13,10 @@
  *     See the License for the specific language governing permissions and
  *     limitations under the License.
  */
+/* Modified 2026-10-14, RXP0006: RX profiles or LTO/test call boundaries.
+ * Original authors/licenses retained. See CHANGELOG.md.
+ */
+
 
 #include "driver/st7565.h"
 #include "bsp/dp32g030/gpio.h"
@@ -54,7 +58,7 @@ void ST7565_DrawLine(uint8_t Column, uint8_t Line, uint16_t Size,
   SPI_ToggleMasterMode(&SPI0->CR, true);
 }
 
-void ST7565_BlitFullScreen(void) {
+__attribute__((noinline)) void ST7565_BlitFullScreen(void) {
   uint8_t Line;
   uint8_t Column;
 
